@@ -61,6 +61,7 @@ jobs:
           echo "Remove any prebuilt library"
           rm -Rvf jme3-android-native/libs/* 
           rm -Rvf jme3-bullet-native-android/libs/* 
+          export ANDROID_NDK=$ANDROID_HOME/ndk-bundle/
           
           gradle --no-daemon --parallel -PbuildNativeProjects=true \
           -Dmaven.repo.local="$PWD/dist/maven" -xmergedJavadoc \
@@ -206,19 +207,19 @@ jobs:
         run: |
           echo "Install on Linux"
           sudo apt-get update
-          sudo apt-get install -y unzip
+          sudo apt-get install -y unzip zip
     
       - name: Install dependencies for Windows
         if:  matrix.osName == 'windows'
         run: |
           echo "Install on Windows"
-          choco install unzip
+          choco install unzip zip
 
       - name: Install dependencies for Mac
         if:  matrix.osName == 'mac'
         run: |
           echo "Install on Mac"
-          brew install unzip
+          brew install unzip zip
 
       - name: Print system info
         shell: bash
