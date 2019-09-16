@@ -303,7 +303,22 @@ jobs:
           cp -Rvf tmp/natives/android/* $cdir/jme3-android-native/libs/
           echo "Done."
 
-  
+
+
+          echo "Build natives zips"
+          mkdir -p tmp/merged-natives
+
+          cd "$cdir/tmp/natives/android"
+          zip -r "$cdir/tmp/merged-natives/android.zip" *
+          
+          cd "$cdir/tmp/natives/android-bullet"
+          zip -r "$cdir/tmp/merged-natives/android-bullet.zip" *
+
+          cd "$cdir/tmp/natives/bullet"
+          zip -r "$cdir/tmp/merged-natives/bullet.zip" *
+
+          cd "$cdir"
+          echo "Done"
                                                      
       - name: Build Engine
         shell: bash
@@ -329,7 +344,7 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: natives
-          path: tmp/natives/
+          path: tmp/merged-natives
           
       # Upload maven artifacts to be used later by the deploy job
       - name: Upload maven artifacts
