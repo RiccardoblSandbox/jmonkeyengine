@@ -62,9 +62,10 @@ jobs:
           rm -Rvf jme3-android-native/libs/* 
           rm -Rvf jme3-bullet-native-android/libs/* 
           export ANDROID_NDK=$ANDROID_HOME/ndk-bundle/
-          
+
           gradle --no-daemon --parallel -PbuildNativeProjects=true \
           -Dmaven.repo.local="$PWD/dist/maven" -xmergedJavadoc \
+          build \ 
           :jme3-android-native:build \
           :jme3-bullet-native-android:build \
           :jme3-android-native:assemble \
@@ -159,7 +160,8 @@ jobs:
           echo "Remove any prebuilt library"
           rm -Rvf jme3-bullet-native/libs/* 
 
-          gradle --no-daemon --parallel -PbuildNativeProjects=true -Dmaven.repo.local="$PWD/dist/maven" -xmergedJavadoc :jme3-bullet-native:build :jme3-bullet-native:install 
+          gradle --no-daemon --parallel -PbuildNativeProjects=true -Dmaven.repo.local="$PWD/dist/maven" -xmergedJavadoc \
+          build :jme3-bullet-native:build :jme3-bullet-native:install 
           
           rm dist/maven/org/jmonkeyengine/jme3-bullet-native/*/*-sources.jar # Remove source jars
           rm dist/maven/org/jmonkeyengine/jme3-bullet-native/*/*-javadoc.jar # Remove javadoc jars
