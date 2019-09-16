@@ -1,0 +1,450 @@
+###########################################################################
+# Note: We use github actions artifact to share files between jobs
+#  - Riccardo Balbo
+###########################################################################
+ 
+name: Build jMonkeyEngine
+on:
+  push:
+    branches:
+      - master
+      - actions
+      - v3.3.*
+      - v3.2
+      - v3.2.*
+  pull_request:
+  release:
+    types: [published]
+  
+jobs:
+  BuildAndroidNatives:
+    name: Build android natives
+    runs-on: ubuntu-18.04
+    container:
+      image: ekreative/android-ndk
+      env:
+        JAVA_OPTS: "-XX:+IgnoreUnrecognizedVMOptions"
+
+    steps:
+      - name: Clone the repo
+        uses: actions/checkout@v1     
+        with:
+          fetch-depth: 1
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          curl https://downloads.gradle.org/distributions/gradle-5.5-bin.zip -o /tmp/gradle.zip
+          if [ "`sha256sum /tmp/gradle.zip | cut -d' ' -f1`" != "8d78b2ed63e7f07ad169c1186d119761c4773e681f332cfe1901045b1b0141bc" ];
+          then 
+            echo "Error. This version of gradle is corrupted."
+            exit 1
+          fi
+          echo "Installing gradle"
+          mkdir -p /tmp/gradle 
+          unzip -q -d /tmp/gradle /tmp/gradle.zip 
+          cp -Rf /tmp/gradle/gradle-*/* /
+          rm -Rf /tmp/gradle 
+          rm -f /tmp/gradle.zip 
+          echo "Gradle `gradle -v` installed"
+
+      - name: Print system info
+        shell: bash
+        run: |
+          (java -version || java --version || echo "Java not available")
+          (gradle --version || echo "Gradle not available" )
+          whoami
+          echo $PWD     
+      
+      - name: Build        
+        run: |
+          echo "Remove any prebuilt library"
+          rm -Rvf jme3-android-native/libs/* 
+          rm -Rvf jme3-bullet-native-android/libs/* 
+          
+          gradle --no-daemon --parallel -PbuildNativeProjects=true \
+          -Dmaven.repo.local="$PWD/dist/maven" -xmergedJavadoc generateNativeHeaders \
+          :jme3-android-native:build \
+          :jme3-bullet-native-android:build \
+          :jme3-android-native:assemble \
+          :jme3-bullet-native-android:assemble \
+          :jme3-android-native:install \
+          :jme3-bullet-native-android:install
+
+          mkdir -p dist/natives/android
+          mkdir -p dist/natives/bullet
+                             
+          rm dist/maven/org/jmonkeyengine/jme3-android-native/*/*-sources.jar # Remove source jars
+          rm dist/maven/org/jmonkeyengine/jme3-android-native/*/*-javadoc.jar # Remove javadoc jars
+          # Prepare natives jar for upload
+          mv dist/maven/org/jmonkeyengine/jme3-android-native/*/*.jar dist/natives/android/android-android-natives.jar 
+     
+          rm dist/maven/org/jmonkeyengine/jme3-bullet-native-android/*/*-sources.jar # Remove source jars
+          rm dist/maven/org/jmonkeyengine/jme3-bullet-native-android/*/*-javadoc.jar # Remove javadoc jars
+          # Prepare natives jar for upload
+          mv dist/maven/org/jmonkeyengine/jme3-bullet-native-android/*/*.jar dist/natives/bullet/android-bullet-natives-android.jar 
+     
+      - name: Upload bullet natives
+        uses: actions/upload-artifact@master
+        with:
+          name: android-bullet-natives
+          path: dist/natives/bullet/
+
+      - name: Upload android natives
+        uses: actions/upload-artifact@master
+        with:
+          name: android-android-natives
+          path: dist/natives/android/
+
+      
+  BuildBulletNatives:
+    strategy:
+      matrix:
+        os: [ubuntu-18.04,windows-2019,macOS-10.14] 
+        jdk: [8.x.x]
+        include:
+          - os: ubuntu-18.04
+            osName: linux
+          - os: windows-2019
+            osName: windows
+          - os: macOS-10.14
+            osName: mac
+              
+    name: Build bullet natives on ${{ matrix.osName }}
+    runs-on: ${{ matrix.os }}    
+    steps:    
+    
+      - name: Clone the repo
+        uses: actions/checkout@v1     
+        with:
+          fetch-depth: 1
+           
+      - name: Prepare java environment
+        uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.jdk }}
+          architecture: x64 
+          
+      - name: Print system info
+        shell: bash
+        run: |
+          (java -version || java --version || echo "Java not available")
+          (gradle --version || echo "Gradle not available" )
+          whoami
+          echo $PWD
+
+      - name: Build Natives
+        shell: bash
+        env:
+          OS_NAME: ${{ matrix.osName }}
+        run: |
+          if [ "$OS_NAME" = "mac" ];
+          then
+            echo "Prepare mac"
+            # We need this older version to compile for 32bit...
+            sudo xcode-select -switch  /Applications/Xcode_9.4.1.app
+            sudo installer -pkg /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
+          elif [ "$OS_NAME" = "linux" ];
+          then
+            echo "Prepare linux"
+            sudo apt-get update
+            sudo apt-get install -y gcc-multilib g++-multilib
+          else
+            echo "Prepare windows"
+          fi
+          
+          mkdir -p dist/natives/bullet
+
+          echo "Remove any prebuilt library"
+          rm -Rvf jme3-bullet-native/libs/* 
+
+          gradle --no-daemon --parallel -PbuildNativeProjects=true -Dmaven.repo.local="$PWD/dist/maven" -xmergedJavadoc generateNativeHeaders :jme3-bullet-native:build :jme3-bullet-native:install 
+          
+          rm dist/maven/org/jmonkeyengine/jme3-bullet-native/*/*-sources.jar # Remove source jars
+          rm dist/maven/org/jmonkeyengine/jme3-bullet-native/*/*-javadoc.jar # Remove javadoc jars
+          # Prepare natives jar for upload
+          mv dist/maven/org/jmonkeyengine/jme3-bullet-native/*/*.jar dist/natives/bullet/${OS_NAME}-bullet-natives.jar 
+          
+      # Upload natives to be used later by the BuildJMonkey job
+      - name: Upload natives
+        uses: actions/upload-artifact@master
+        with:
+          name: ${{ matrix.osName }}-bullet-natives
+          path: dist/natives/bullet
+ 
+
+  BuildJMonkey:  
+    needs: [BuildBulletNatives,BuildAndroidNatives]
+    name: Build on ${{ matrix.osName }} jdk${{ matrix.jdk }}
+    runs-on: ${{ matrix.os }}    
+    strategy:
+      matrix:
+        os: [ubuntu-18.04,windows-2019,macOS-10.14]
+        jdk: [8.x.x,11.x.x]
+        include:
+          - os: ubuntu-18.04
+            osName: linux
+          - os: windows-2019
+            osName: windows
+          - os: macOS-10.14
+            osName: mac  
+    steps:          
+    
+      - name: Clone the repo
+        uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+          
+      - name: Setup the java environment
+        uses: actions/setup-java@v1
+        with:
+          java-version: ${{ matrix.jdk }}
+          architecture: x64 
+          
+      - name: Install dependencies for Linux
+        if:  matrix.osName == 'linux'
+        run: |
+          echo "Install on Linux"
+          sudo apt-get update
+          sudo apt-get install -y unzip
+    
+      - name: Install dependencies for Windows
+        if:  matrix.osName == 'windows'
+        run: |
+          echo "Install on Windows"
+          choco install unzip
+
+      - name: Install dependencies for Mac
+        if:  matrix.osName == 'mac'
+        run: |
+          echo "Install on Mac"
+          brew install unzip
+
+      - name: Print system info
+        shell: bash
+        run: |
+          (java -version || java --version || echo "Java not available")
+          (gradle --version || echo "Gradle not available" )
+          whoami
+          echo $PWD
+            
+      - name: Prepare to extract natives
+        shell: bash
+        run: |
+          mkdir -p tmp/natives/bullet
+          mkdir -p tmp/natives/android
+          mkdir -p tmp/natives/android-bullet
+          
+      - name: Download bullet for linux
+        uses: actions/download-artifact@master
+        with:
+          name: linux-bullet-natives
+          path: tmp/natives/bullet
+
+      - name: Download bullet for windows
+        uses: actions/download-artifact@master
+        with:
+          name: windows-bullet-natives
+          path: tmp/natives/bullet
+             
+      - name: Download bullet for mac
+        uses: actions/download-artifact@master
+        with:
+          name: mac-bullet-natives
+          path: tmp/natives/bullet
+
+      - name: Download bullet for android
+        uses: actions/download-artifact@master
+        with:
+          name: android-bullet-natives
+          path: tmp/natives/android-bullet
+      
+      - name: Download natives for android
+        uses: actions/download-artifact@master
+        with:
+          name: android-android-natives
+          path: tmp/natives/android
+
+      - name: Extract natives
+        shell: bash
+        run: |
+          cdir="$PWD"
+          
+          echo "Extract and merge bullet natives"         
+          echo Remove any prebuilt native
+          rm -Rf jme3-bullet-native/libs/native/*
+          
+          cd tmp/natives/bullet
+          unzip -o "*.jar"
+          rm *.jar
+          cd "$cdir"
+          cp -Rvf tmp/natives/bullet/native/* $cdir/jme3-bullet-native/libs/native/
+          echo "Done."
+
+          echo "Extract and merge bullet natives for android"         
+          echo Remove any prebuilt native
+          rm -Rvf jme3-bullet-native-android/libs/* 
+
+          cd tmp/natives/android-bullet
+          unzip -o "*.jar"
+          rm *.jar
+          cd "$cdir"
+          cp -Rvf tmp/natives/android-bullet/* $cdir/jme3-bullet-native-android/libs/
+          echo "Done."
+
+          echo "Extract and merge bullet natives for android"         
+          echo Remove any prebuilt native
+          rm -Rvf jme3-android-native/libs/* 
+
+          cd tmp/natives/android
+          unzip -o "*.jar"
+          rm *.jar
+          cd "$cdir"
+          cp -Rvf tmp/natives/android/* $cdir/jme3-android-native/libs/
+          echo "Done."
+
+  
+                                                     
+      - name: Build Engine
+        shell: bash
+        env: 
+          JDK_VERSION:  ${{ matrix.jdk }}
+        run: |
+          source .github/workflows/travisCompatEnv.sh
+          
+          gradle --parallel build 
+          # Workaround for #1176: Skip in java 11
+          if [ "$JDK_VERSION" != "11.x.x" ]; then  gradle mergedJavadoc ; fi
+          gradle --parallel createZipDistribution
+
+          mkdir -p ./dist/release/
+          mv build/distributions/*.zip dist/release/
+          
+          mkdir -p ./dist/maven/
+          gradle --parallel install -Dmaven.repo.local="$PWD/dist/maven"
+
+      # Used later by DeploySnapshot
+      - name: Upload merged natives
+        if:  matrix.jdk == '8.x.x' && matrix.os == 'ubuntu-18.04'
+        uses: actions/upload-artifact@master
+        with:
+          name: natives
+          path: tmp/natives/
+          
+      # Upload maven artifacts to be used later by the deploy job
+      - name: Upload maven artifacts
+        if: github.event_name == 'release' && matrix.jdk == '8.x.x' && matrix.os == 'ubuntu-18.04'
+        uses: actions/upload-artifact@master
+        with:
+          name: maven
+          path: dist/maven              
+          
+      # Upload release archive to be used later by the deploy job    
+      - name: Upload release
+        if: github.event_name == 'release' && matrix.jdk == '8.x.x' && matrix.os == 'ubuntu-18.04'
+        uses: actions/upload-artifact@master
+        with:
+          name: release
+          path: dist/release             
+
+  DeploySnapshot:
+    needs: [BuildJMonkey]
+    name: "Deploy snapshot"
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Clone the repo
+        uses: actions/checkout@v1
+      
+      - name: Download merged natives
+        uses: actions/download-artifact@master
+        with:
+          name: natives
+          path: tmp/natives
+
+      - name: Deploy natives snapshot
+        if: matrix.jdk == '8.x.x' && matrix.os == 'ubuntu-18.04'
+        run: |
+          source .github/workflows/bintray.sh
+          echo "Detect changes"
+          NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" -- jme3-bullet-native/)"
+          if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" --  jme3-android-native/)"; fi
+          if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" --  jme3-bullet-native-android/)"; fi
+          if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" --  jme3-bullet/)"; fi
+        
+          if [ "$NATIVE_CHANGES" = "" ];
+          then
+            echo "No changes, skip."
+          else
+            if [ "${{ secrets.BINTRAY_GENERIC_REPO }}" = "" ];
+            then
+              echo "Configure the following secrets to enable native snapshot deployment"
+              echo "BINTRAY_GENERIC_REPO, BINTRAY_USER, BINTRAY_APIKEY"
+            else
+              bintray_uploadAll tmp/natives $GITHUB_SHA/ \
+              ${{ secrets.BINTRAY_GENERIC_REPO }} "content" "natives" ${{ secrets.BINTRAY_USER }} ${{ secrets.BINTRAY_APIKEY }}  \
+              "https://github.com/${GITHUB_REPOSITORY}" "BSD 3-Clause"
+            fi
+          fi
+
+
+  DeployRelease:  
+    needs: [BuildJMonkey]
+    name: Deploy Release
+    runs-on: ubuntu-18.04
+    if: github.event_name == 'release'
+    steps:   
+    
+      # We need to clone everything again for uploadToMaven.sh ...
+      - name: Clone the repo
+        uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+    
+      - name: Download maven artifacts
+        uses: actions/download-artifact@master
+        with:
+          name: maven
+          path: dist/maven
+      
+      - name: Download release
+        uses: actions/download-artifact@master
+        with:
+          name: release
+          path: dist/release      
+      
+      - name: Deploy to github releases    
+        env:           
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   
+        run: |
+          echo "${GITHUB_EVENT_PATH}"
+          cat ${GITHUB_EVENT_PATH}
+          releaseId=$(jq --raw-output '.release.id' ${GITHUB_EVENT_PATH})
+          echo "Upload to release $releaseId"
+          filename="$(ls dist/release/*.zip)"
+          url="https://uploads.github.com/repos/${GITHUB_REPOSITORY}/releases/$releaseId/assets?name=$(basename $filename)"
+          echo "Upload to $url"
+          curl -L \
+          -H "Authorization: token ${GITHUB_TOKEN}" \
+          -H "Content-Type: application/zip" \
+          --data-binary @"$filename" \
+          "$url"
+            
+      - name: Deploy to bintray
+        run: |
+          echo "Deploy to bintray"
+          source .github/workflows/uploadToMaven.sh
+          if [ "${{ secrets.BINTRAY_MAVEN_REPO }}" = "" ];
+          then
+            echo "Configure the following secrets to enable bintray deployment"
+            echo "BINTRAY_MAVEN_REPO, BINTRAY_USER, BINTRAY_APIKEY"
+          else
+            uploadAllToMaven dist/maven/ https://api.bintray.com/maven/${{ secrets.BINTRAY_MAVEN_REPO }} ${{ secrets.BINTRAY_USER }} ${{ secrets.BINTRAY_APIKEY }} "https://github.com/${GITHUB_REPOSITORY}" "BSD 3-Clause"
+          fi
+      
+      - name: Deploy on github package registry
+        run: |
+          echo "Deploy to github package registry (TODO)"
+          find dist/maven -type f
+
+          
+

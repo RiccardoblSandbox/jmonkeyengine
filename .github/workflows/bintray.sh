@@ -1,0 +1,85 @@
+#!/bin/bash
+
+# bintray_createPackage [REPO] [PACKAGE] [USER] [PASSWORD] [GIT REPO] [LICENSE]
+function bintray_createPackage {
+    repo="$1"
+    package="$2"
+    user="$3"
+    password="$4"
+    srcrepo="$5"
+    license="$6"
+
+    repoUrl="https://api.bintray.com/packages/$repo"
+
+    if [ "`curl -u$user:$password -H Content-Type:application/json -H Accept:application/json \
+    --write-out %{http_code} --silent --output /dev/null -X GET \"$packageUrl/$package\"`" != "200" ];
+    then
+
+        if [ "$srcrepo" != "" -a "$license" != "" ];
+        then 
+            echo "Package does not exist... create."
+            data="{
+                \"name\": \"${package}\",
+                \"labels\": [],
+                \"licenses\": [\"${license}\"],
+                \"vcs_url\": \"${srcrepo}\"
+            }"
+            curl -u$user:$password -H Content-Type:application/json -H Accept:application/json -X POST \
+                -d "${data}" "$repoUrl"
+        else
+            echo "Package does not exist... you need to specify a repo and license for it to be created."
+        fi
+    else    
+        echo "The package already exists. Skip."
+    fi
+}
+
+# uploadFile file destination [REPO] "content" [PACKAGE] [USER] [PASSWORD] [SRCREPO] [LICENSE]
+function bintray_uploadFile {
+    file="$1"
+    dest="$2"
+    
+    echo "Upload $file to $dest"
+
+    repo="$3"
+    type="$4"
+    package="$5"
+
+    user="$6"
+    password="$7"
+   
+    srcrepo="$8"
+    license="$9"
+    bintray_createPackage $user $password $repo $package $srcrepo $license
+    curl -T "$file" -u$user:$password \
+     "https://api.bintray.com/$type/$repo/$package/$dest"
+}
+
+function bintray_uploadAll {
+    path="$1"
+    dest="$2"
+    repo="$3"
+    type="$4"
+    package="$5"
+
+    user="$6"
+    password="$7"
+   
+    srcrepo="$8"
+    license="$9"
+    cdir="$PWD"
+    cd "$path"
+
+    files="`find . -type f -print`"
+    IFS="
+"
+    set -f
+    for f in $files; do
+        dest="${f:2}"
+        bintray_uploadFile $f $dest \
+        $repo $type $package $user $password $srcrepo $license
+    done
+    set +f
+    unset IFS
+    cd "$cdir"
+}
