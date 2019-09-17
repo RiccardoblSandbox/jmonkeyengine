@@ -373,7 +373,6 @@ jobs:
           path: tmp/natives
 
       - name: Deploy natives snapshot
-        if: matrix.jdk == '8.x.x' && matrix.os == 'ubuntu-18.04'
         run: |
           source .github/actions/tools/bintray.sh
           echo "Detect changes"

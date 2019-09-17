@@ -6,7 +6,7 @@ JNIEXPORT jstring JNICALL Java_com_jme3_audio_android_AndroidAL_alGetString
   (JNIEnv* env, jobject obj, jint param)
 {
     return (*env)->NewStringUTF(env, alGetString(param));
-}
+} 
 
 JNIEXPORT jint JNICALL Java_com_jme3_audio_android_AndroidAL_alGenSources
   (JNIEnv *env, jobject obj)
