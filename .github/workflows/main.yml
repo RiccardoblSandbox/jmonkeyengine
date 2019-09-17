@@ -362,9 +362,17 @@ jobs:
     needs: [BuildJMonkey]
     name: "Deploy snapshot"
     runs-on: ubuntu-18.04
+    if: github.event_name == 'push'
     steps:
       - name: Clone the repo
-        uses: actions/checkout@v1
+        run: |
+          branch="${GITHUB_REF//refs\/heads\//}"
+          if [ "$branch" != "" ];
+          then
+            git clone --single-branch --branch "$branch" https://github.com/${GITHUB_REPOSITORY}.git .
+            git reset --hard "$GITHUB_SHA"
+          fi
+
       
       - name: Download merged natives
         uses: actions/download-artifact@master
@@ -379,43 +387,47 @@ jobs:
         run: |
           source .github/actions/tools/bintray.sh
           NATIVE_CHANGES="yes"
-
-          if [ -f "natives-snapshot.properties" ];
+          branch="${GITHUB_REF//refs\/heads\//}"
+          if [ "$branch" != "" ];
           then
-            nativeSnapshot=`cat "natives-snapshot.properties"`
-            nativeSnapshot="${nativeSnapshot#*=}"
-
-            echo "Detect changes"
-            NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot" -- jme3-bullet-native/)"
-            if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot"  --  jme3-android-native/)"; fi
-            if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot"  --  jme3-bullet-native-android/)"; fi
-            if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot"  --  jme3-bullet/)"; fi
-           
-          fi
-
-          if [ "$NATIVE_CHANGES" = "" ];
-          then
-            echo "No changes, skip."
-          else
-            if [ "${{ secrets.BINTRAY_GENERIC_REPO }}" = "" ];
+            if [ -f "natives-snapshot.properties" ];
             then
-              echo "Configure the following secrets to enable native snapshot deployment"
-              echo "BINTRAY_GENERIC_REPO, BINTRAY_USER, BINTRAY_APIKEY"
-            else
-              bintray_uploadAll tmp/natives $GITHUB_SHA/$GITHUB_SHA \
-              ${{ secrets.BINTRAY_GENERIC_REPO }} "content" "natives" ${{ secrets.BINTRAY_USER }} ${{ secrets.BINTRAY_APIKEY }}  \
-              "https://github.com/${GITHUB_REPOSITORY}" "${{ secrets.BINTRAY_LICENSE }}" "true"
+              nativeSnapshot=`cat "natives-snapshot.properties"`
+              nativeSnapshot="${nativeSnapshot#*=}"
 
-               echo "natives.snapshot=$GITHUB_SHA" > natives-snapshot.properties
-              
-               git config --global user.name "GithubActions"
-               git config --global user.email "actions@robot.frk.wf"
-    
-               git add natives-snapshot.properties
+              echo "Detect changes"
+              NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot" -- jme3-bullet-native/)"
+              if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot"  --  jme3-android-native/)"; fi
+              if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot"  --  jme3-bullet-native-android/)"; fi
+              if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot"  --  jme3-bullet/)"; fi
             
-               git commit -m "[skip ci] update natives snapshot"
-               header=$(echo -n "ad-m:${GITHUB_TOKEN}" | base64)
-               git -c http.extraheader="AUTHORIZATION: basic $header" push origin HEAD --force
+            fi
+
+            if [ "$NATIVE_CHANGES" = "" ];
+            then
+              echo "No changes, skip."
+            else
+              if [ "${{ secrets.BINTRAY_GENERIC_REPO }}" = "" ];
+              then
+                echo "Configure the following secrets to enable native snapshot deployment"
+                echo "BINTRAY_GENERIC_REPO, BINTRAY_USER, BINTRAY_APIKEY"
+              else
+                bintray_uploadAll tmp/natives $GITHUB_SHA/$GITHUB_SHA \
+                ${{ secrets.BINTRAY_GENERIC_REPO }} "content" "natives" ${{ secrets.BINTRAY_USER }} ${{ secrets.BINTRAY_APIKEY }}  \
+                "https://github.com/${GITHUB_REPOSITORY}" "${{ secrets.BINTRAY_LICENSE }}" "true"
+
+                echo "natives.snapshot=$GITHUB_SHA" > natives-snapshot.properties
+                
+                git config --global user.name "GithubActions"
+                git config --global user.email "actions@robot.frk.wf"
+      
+                git add natives-snapshot.properties
+              
+                git commit -m "[skip ci] update natives snapshot"
+                header=$(echo -n "ad-m:${GITHUB_TOKEN}" | base64)
+
+                (git -c http.extraheader="AUTHORIZATION: basic $header" push origin "$branch" || true)
+              fi
             fi
           fi
 
