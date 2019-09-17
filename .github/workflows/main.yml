@@ -460,7 +460,8 @@ jobs:
       
       - name: Deploy to github package registry
         run: |
-          registry="https://maven.pkg.github.com/$GITHUB_ACTOR"
+          owner="${GITHUB_REPOSITORY%%/*}"
+          registry="https://maven.pkg.github.com/$owner"
           echo "Deploy to github package registry $registry"
           uploadAllToMaven dist/maven/ $registry $GH_TOKEN
           
