@@ -323,16 +323,16 @@ jobs:
         run: |
           source .github/actions/tools/travisCompatEnv.sh
           
-          gradle --parallel build 
+          gradle --parallel -xmergedJavadoc build
           # Workaround for #1176: Skip in java 11
-          if [ "${{ matrix.jdk }}" = "8.x.x" -a "${{ matrix.osName }}" = "linux" ]; then  gradle mergedJavadoc ; fi
-          gradle --parallel createZipDistribution
+          if [ "${{ matrix.jdk }}" = "8.x.x" ]; then  gradle mergedJavadoc ; fi
+          gradle --parallel -xmergedJavadoc createZipDistribution
 
           mkdir -p ./dist/release/
           mv build/distributions/*.zip dist/release/
           
           mkdir -p ./dist/maven/
-          gradle --parallel install -Dmaven.repo.local="$PWD/dist/maven"
+          gradle --parallel -xmergedJavadoc install -Dmaven.repo.local="$PWD/dist/maven"
 
       # Used later by DeploySnapshot
       - name: Upload merged natives
