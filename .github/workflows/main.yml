@@ -35,7 +35,7 @@ jobs:
     name: Build android natives
     runs-on: ubuntu-18.04
     container:
-      image: ./.github/actions/androidndk
+      image: riccardoblb/buildenv-android
       env:
         JAVA_OPTS: "-XX:+IgnoreUnrecognizedVMOptions"
 
