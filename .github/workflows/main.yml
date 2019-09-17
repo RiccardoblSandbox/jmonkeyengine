@@ -1,7 +1,21 @@
-###########################################################################
+######################################################################################
 # Note: We use github actions artifact to share files between jobs
-#  - Riccardo Balbo
-###########################################################################
+################# CONFIGURATION ######################################################
+# BINTRAY RELEASE & NATIVE SNAPSHOT
+#   Configure the following secrets/variables (customize the values with your own)
+#     BINTRAY_GENERIC_REPO=riccardoblsandbox/jmonkeyengine-files
+#     BINTRAY_MAVEN_REPO=riccardoblsandbox/jmonkeyengine
+#     BINTRAY_USER=riccardo
+#     BINTRAY_APIKEY=XXXXXX
+#     BINTRAY_LICENSE="BSD 3-Clause"
+#
+# PACKAGE REGISTRY RELEASE
+#   Nothing to do, everything is autoconfigured to work with the account/org that 
+#   is hosting this file.
+######################################################################################
+#
+#       - Riccardo Balbo
+######################################################################################
  
 name: Build jMonkeyEngine
 on:
@@ -21,7 +35,7 @@ jobs:
     name: Build android natives
     runs-on: ubuntu-18.04
     container:
-      image: ekreative/android-ndk
+      image: ./.github/actions/androidndk
       env:
         JAVA_OPTS: "-XX:+IgnoreUnrecognizedVMOptions"
 
@@ -30,23 +44,6 @@ jobs:
         uses: actions/checkout@v1     
         with:
           fetch-depth: 1
-
-      - name: Install dependencies
-        shell: bash
-        run: |
-          curl https://downloads.gradle.org/distributions/gradle-5.5-bin.zip -o /tmp/gradle.zip
-          if [ "`sha256sum /tmp/gradle.zip | cut -d' ' -f1`" != "8d78b2ed63e7f07ad169c1186d119761c4773e681f332cfe1901045b1b0141bc" ];
-          then 
-            echo "Error. This version of gradle is corrupted."
-            exit 1
-          fi
-          echo "Installing gradle"
-          mkdir -p /tmp/gradle 
-          unzip -q -d /tmp/gradle /tmp/gradle.zip 
-          cp -Rf /tmp/gradle/gradle-*/* /
-          rm -Rf /tmp/gradle 
-          rm -f /tmp/gradle.zip 
-          echo "Gradle `gradle -v` installed"
 
       - name: Print system info
         shell: bash
@@ -61,10 +58,9 @@ jobs:
           echo "Remove any prebuilt library"
           rm -Rvf jme3-android-native/libs/* 
           rm -Rvf jme3-bullet-native-android/libs/* 
-          export ANDROID_NDK=$ANDROID_HOME/ndk-bundle/
 
-          gradle --no-daemon --parallel -PbuildNativeProjects=true \
-          -Dmaven.repo.local="$PWD/dist/maven" -xmergedJavadoc build \
+          gradle --no-daemon -PbuildNativeProjects=true \
+          -Dmaven.repo.local="$PWD/dist/maven" -xmergedJavadoc \
           :jme3-android-native:assemble \
           :jme3-bullet-native-android:assemble \
           :jme3-android-native:install \
@@ -325,7 +321,7 @@ jobs:
         env: 
           JDK_VERSION:  ${{ matrix.jdk }}
         run: |
-          source .github/workflows/travisCompatEnv.sh
+          source .github/actions/tools/travisCompatEnv.sh
           
           gradle --parallel build 
           # Workaround for #1176: Skip in java 11
@@ -379,7 +375,7 @@ jobs:
       - name: Deploy natives snapshot
         if: matrix.jdk == '8.x.x' && matrix.os == 'ubuntu-18.04'
         run: |
-          source .github/workflows/bintray.sh
+          source .github/actions/tools/bintray.sh
           echo "Detect changes"
           NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" -- jme3-bullet-native/)"
           if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" --  jme3-android-native/)"; fi
@@ -397,7 +393,7 @@ jobs:
             else
               bintray_uploadAll tmp/natives $GITHUB_SHA/ \
               ${{ secrets.BINTRAY_GENERIC_REPO }} "content" "natives" ${{ secrets.BINTRAY_USER }} ${{ secrets.BINTRAY_APIKEY }}  \
-              "https://github.com/${GITHUB_REPOSITORY}" "BSD 3-Clause"
+              "https://github.com/${GITHUB_REPOSITORY}" "${{ secrets.BINTRAY_LICENSE }}"
             fi
           fi
 
@@ -447,13 +443,13 @@ jobs:
       - name: Deploy to bintray
         run: |
           echo "Deploy to bintray"
-          source .github/workflows/uploadToMaven.sh
+          source .github/actions/tools/uploadToMaven.sh
           if [ "${{ secrets.BINTRAY_MAVEN_REPO }}" = "" ];
           then
             echo "Configure the following secrets to enable bintray deployment"
             echo "BINTRAY_MAVEN_REPO, BINTRAY_USER, BINTRAY_APIKEY"
           else
-            uploadAllToMaven dist/maven/ https://api.bintray.com/maven/${{ secrets.BINTRAY_MAVEN_REPO }} ${{ secrets.BINTRAY_USER }} ${{ secrets.BINTRAY_APIKEY }} "https://github.com/${GITHUB_REPOSITORY}" "BSD 3-Clause"
+            uploadAllToMaven dist/maven/ https://api.bintray.com/maven/${{ secrets.BINTRAY_MAVEN_REPO }} ${{ secrets.BINTRAY_USER }} ${{ secrets.BINTRAY_APIKEY }} "https://github.com/${GITHUB_REPOSITORY}" "${{ secrets.BINTRAY_LICENSE }}"
           fi
       
       - name: Deploy to github package registry
