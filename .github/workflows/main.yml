@@ -285,7 +285,7 @@ jobs:
           unzip -o "*.jar"
           rm *.jar
           cd "$cdir"
-          cp -Rvf tmp/natives/android-bullet/* $cdir/jme3-bullet-native-android/libs/
+          cp -Rvf tmp/natives/android-bullet/lib/* $cdir/jme3-bullet-native-android/libs/
           echo "Done."
 
           echo "Extract and merge bullet natives for android"         
@@ -296,7 +296,7 @@ jobs:
           unzip -o "*.jar"
           rm *.jar
           cd "$cdir"
-          cp -Rvf tmp/natives/android/* $cdir/jme3-android-native/libs/
+          cp -Rvf tmp/natives/android/lib/* $cdir/jme3-android-native/libs/
           echo "Done."
 
 
