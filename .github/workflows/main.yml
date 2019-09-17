@@ -65,8 +65,6 @@ jobs:
 
           gradle --no-daemon --parallel -PbuildNativeProjects=true \
           -Dmaven.repo.local="$PWD/dist/maven" -xmergedJavadoc build \
-          :jme3-android-native:build \
-          :jme3-bullet-native-android:build \
           :jme3-android-native:assemble \
           :jme3-bullet-native-android:assemble \
           :jme3-android-native:install \
