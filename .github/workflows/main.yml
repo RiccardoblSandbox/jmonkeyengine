@@ -64,8 +64,7 @@ jobs:
           export ANDROID_NDK=$ANDROID_HOME/ndk-bundle/
 
           gradle --no-daemon --parallel -PbuildNativeProjects=true \
-          -Dmaven.repo.local="$PWD/dist/maven" -xmergedJavadoc \
-          build \ 
+          -Dmaven.repo.local="$PWD/dist/maven" -xmergedJavadoc build \ 
           :jme3-android-native:build \
           :jme3-bullet-native-android:build \
           :jme3-android-native:assemble \
