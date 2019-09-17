@@ -415,7 +415,7 @@ jobs:
             
                git commit -m "[skip ci] update natives snapshot"
                header=$(echo -n "ad-m:${GITHUB_TOKEN}" | base64)
-               git -c http.extraheader="AUTHORIZATION: basic $header" push origin run --force
+               git -c http.extraheader="AUTHORIZATION: basic $header" push origin HEAD --force
             fi
           fi
 

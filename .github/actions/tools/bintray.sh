@@ -64,7 +64,7 @@ function bintray_uploadFile {
 
 function bintray_uploadAll {
     path="$1"
-    dest="$2"
+    destpath="$2"
     repo="$3"
     type="$4"
     package="$5"
@@ -84,9 +84,7 @@ function bintray_uploadAll {
 "
     set -f
     for f in $files; do
-        echo "${f:2}" 
-        echo "$dest"
-        destfile="$dest/${f:2}"
+        destfile="$destpath/${f:2}"
         bintray_uploadFile $f $destfile $repo $type $package $user $password $srcrepo $license $publish
     done
     set +f
