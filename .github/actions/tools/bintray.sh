@@ -10,9 +10,8 @@ function bintray_createPackage {
     license="$6"
 
     repoUrl="https://api.bintray.com/packages/$repo"
-
     if [ "`curl -u$user:$password -H Content-Type:application/json -H Accept:application/json \
-    --write-out %{http_code} --silent --output /dev/null -X GET \"$packageUrl/$package\"`" != "200" ];
+    --write-out %{http_code} --silent --output /dev/null -X GET \"$repoUrl/$package\"`" != "200" ];
     then
 
         if [ "$srcrepo" != "" -a "$license" != "" ];
@@ -24,7 +23,9 @@ function bintray_createPackage {
                 \"licenses\": [\"${license}\"],
                 \"vcs_url\": \"${srcrepo}\"
             }"
-            curl -u$user:$password -H Content-Type:application/json -H Accept:application/json -X POST \
+     
+
+            curl -u$user:$password -H "Content-Type:application/json" -H "Accept:application/json" -X POST \
                 -d "${data}" "$repoUrl"
         else
             echo "Package does not exist... you need to specify a repo and license for it to be created."
@@ -52,7 +53,7 @@ function bintray_uploadFile {
     license="$9"
     publish="${10}"
 
-    bintray_createPackage $user $password $repo $package $srcrepo $license
+    bintray_createPackage $repo $package $user $password $srcrepo $license
 
     url="https://api.bintray.com/$type/$repo/$package/$dest"
     if [ "$publish" = "true" ]; then url="$url;publish=1"; fi
@@ -83,8 +84,8 @@ function bintray_uploadAll {
 "
     set -f
     for f in $files; do
-        dest="${f:2}"
-        bintray_uploadFile $f $dest \
+        destf="$dest/${f:2}"
+        bintray_uploadFile $f $destf \
         $repo $type $package $user $password $srcrepo $license $publish
     done
     set +f

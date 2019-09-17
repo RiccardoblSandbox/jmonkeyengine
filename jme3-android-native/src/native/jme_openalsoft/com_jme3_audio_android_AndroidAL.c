@@ -14,7 +14,7 @@ JNIEXPORT jint JNICALL Java_com_jme3_audio_android_AndroidAL_alGenSources
     ALuint source;
     alGenSources(1, &source);
     return source;
-}
+} 
 
 JNIEXPORT jint JNICALL Java_com_jme3_audio_android_AndroidAL_alGetError
   (JNIEnv *env, jobject obj)
