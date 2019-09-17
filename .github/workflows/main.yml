@@ -325,7 +325,7 @@ jobs:
           
           gradle --parallel build 
           # Workaround for #1176: Skip in java 11
-          if [ "$JDK_VERSION" != "11.x.x" ]; then  gradle mergedJavadoc ; fi
+          if [ "${{ matrix.jdk }}" = "8.x.x" -a "${{ matrix.osName }}" = "linux" ]; then  gradle mergedJavadoc ; fi
           gradle --parallel createZipDistribution
 
           mkdir -p ./dist/release/
