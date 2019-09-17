@@ -64,7 +64,7 @@ jobs:
           export ANDROID_NDK=$ANDROID_HOME/ndk-bundle/
 
           gradle --no-daemon --parallel -PbuildNativeProjects=true \
-          -Dmaven.repo.local="$PWD/dist/maven" -xmergedJavadoc build \ 
+          -Dmaven.repo.local="$PWD/dist/maven" -xmergedJavadoc build \
           :jme3-android-native:build \
           :jme3-bullet-native-android:build \
           :jme3-android-native:assemble \
@@ -458,10 +458,10 @@ jobs:
             uploadAllToMaven dist/maven/ https://api.bintray.com/maven/${{ secrets.BINTRAY_MAVEN_REPO }} ${{ secrets.BINTRAY_USER }} ${{ secrets.BINTRAY_APIKEY }} "https://github.com/${GITHUB_REPOSITORY}" "BSD 3-Clause"
           fi
       
-      - name: Deploy on github package registry
+      - name: Deploy to github package registry
         run: |
-          echo "Deploy to github package registry (TODO)"
-          find dist/maven -type f
-
+          registry="https://maven.pkg.github.com/$GITHUB_ACTOR"
+          echo "Deploy to github package registry $registry"
+          uploadAllToMaven dist/maven/ $registry $GH_TOKEN
           
 
