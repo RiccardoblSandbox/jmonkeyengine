@@ -370,7 +370,6 @@ jobs:
           if [ "$branch" != "" ];
           then
             git clone --single-branch --branch "$branch" https://github.com/${GITHUB_REPOSITORY}.git .
-            git reset --hard "$GITHUB_SHA"
           fi
 
       
@@ -395,12 +394,16 @@ jobs:
               nativeSnapshot=`cat "natives-snapshot.properties"`
               nativeSnapshot="${nativeSnapshot#*=}"
 
-              echo "Detect changes"
-              NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot" -- jme3-bullet-native/)"
-              if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot"  --  jme3-android-native/)"; fi
-              if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot"  --  jme3-bullet-native-android/)"; fi
-              if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot"  --  jme3-bullet/)"; fi
-            
+              if [ "`git rev-list --count $nativeSnapshot..$GITHUB_SHA`" = "0" ]; # if nativeSnapshot comes after GITHUB_SHA, skip
+              then
+                NATIVE_CHANGES=""
+              else
+                echo "Detect changes"
+                NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot" -- jme3-bullet-native/)"
+                if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot"  --  jme3-android-native/)"; fi
+                if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot"  --  jme3-bullet-native-android/)"; fi
+                if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot"  --  jme3-bullet/)"; fi
+              fi
             fi
 
             if [ "$NATIVE_CHANGES" = "" ];
