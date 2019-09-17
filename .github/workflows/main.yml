@@ -375,12 +375,21 @@ jobs:
       - name: Deploy natives snapshot
         run: |
           source .github/actions/tools/bintray.sh
-          echo "Detect changes"
-          NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" -- jme3-bullet-native/)"
-          if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" --  jme3-android-native/)"; fi
-          if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" --  jme3-bullet-native-android/)"; fi
-          if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" --  jme3-bullet/)"; fi
-        
+          NATIVE_CHANGES="yes"
+
+          if [ -f "natives-snapshot.properties" ];
+          then
+            nativeSnapshot=`cat "natives-snapshot.properties"`
+            nativeSnapshot="${nativeSnapshot#*=}"
+
+            echo "Detect changes"
+            NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot" -- jme3-bullet-native/)"
+            if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot"  --  jme3-android-native/)"; fi
+            if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot"  --  jme3-bullet-native-android/)"; fi
+            if [ "$NATIVE_CHANGES" = "" ];then NATIVE_CHANGES="$(git diff-tree --name-only "$GITHUB_SHA" "$nativeSnapshot"  --  jme3-bullet/)"; fi
+           
+          fi
+
           if [ "$NATIVE_CHANGES" = "" ];
           then
             echo "No changes, skip."
@@ -393,6 +402,12 @@ jobs:
               bintray_uploadAll tmp/natives $GITHUB_SHA/$GITHUB_SHA/ \
               ${{ secrets.BINTRAY_GENERIC_REPO }} "content" "natives" ${{ secrets.BINTRAY_USER }} ${{ secrets.BINTRAY_APIKEY }}  \
               "https://github.com/${GITHUB_REPOSITORY}" "${{ secrets.BINTRAY_LICENSE }}" "true"
+
+               echo "natives.snapshot=$GITHUB_SHA" > natives-snapshot.properties
+
+               git add natives-snapshot.properties
+               git commit -m "[skip ci] update natives snapshot"
+               git push -u origin HEAD
             fi
           fi
 
