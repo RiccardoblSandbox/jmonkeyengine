@@ -373,6 +373,9 @@ jobs:
           path: tmp/natives
 
       - name: Deploy natives snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
         run: |
           source .github/actions/tools/bintray.sh
           NATIVE_CHANGES="yes"
@@ -399,15 +402,20 @@ jobs:
               echo "Configure the following secrets to enable native snapshot deployment"
               echo "BINTRAY_GENERIC_REPO, BINTRAY_USER, BINTRAY_APIKEY"
             else
-              bintray_uploadAll tmp/natives $GITHUB_SHA/$GITHUB_SHA/ \
+              bintray_uploadAll tmp/natives $GITHUB_SHA/$GITHUB_SHA \
               ${{ secrets.BINTRAY_GENERIC_REPO }} "content" "natives" ${{ secrets.BINTRAY_USER }} ${{ secrets.BINTRAY_APIKEY }}  \
               "https://github.com/${GITHUB_REPOSITORY}" "${{ secrets.BINTRAY_LICENSE }}" "true"
 
                echo "natives.snapshot=$GITHUB_SHA" > natives-snapshot.properties
-
+              
+               git config --global user.name "GithubActions"
+               git config --global user.email "actions@robot.frk.wf"
+    
                git add natives-snapshot.properties
+            
                git commit -m "[skip ci] update natives snapshot"
-               git push -u origin HEAD
+               header=$(echo -n "ad-m:${GITHUB_TOKEN}" | base64)
+               git -c http.extraheader="AUTHORIZATION: basic $header" push origin run --force
             fi
           fi
 

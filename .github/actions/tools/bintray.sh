@@ -84,9 +84,10 @@ function bintray_uploadAll {
 "
     set -f
     for f in $files; do
-        destf="$dest/${f:2}"
-        bintray_uploadFile $f $destf \
-        $repo $type $package $user $password $srcrepo $license $publish
+        echo "${f:2}" 
+        echo "$dest"
+        destfile="$dest/${f:2}"
+        bintray_uploadFile $f $destfile $repo $type $package $user $password $srcrepo $license $publish
     done
     set +f
     unset IFS
