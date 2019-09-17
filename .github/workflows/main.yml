@@ -393,7 +393,7 @@ jobs:
             else
               bintray_uploadAll tmp/natives $GITHUB_SHA/ \
               ${{ secrets.BINTRAY_GENERIC_REPO }} "content" "natives" ${{ secrets.BINTRAY_USER }} ${{ secrets.BINTRAY_APIKEY }}  \
-              "https://github.com/${GITHUB_REPOSITORY}" "${{ secrets.BINTRAY_LICENSE }}"
+              "https://github.com/${GITHUB_REPOSITORY}" "${{ secrets.BINTRAY_LICENSE }}" "true"
             fi
           fi
 

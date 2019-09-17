@@ -50,9 +50,15 @@ function bintray_uploadFile {
    
     srcrepo="$8"
     license="$9"
+    publish="${10}"
+
     bintray_createPackage $user $password $repo $package $srcrepo $license
-    curl -T "$file" -u$user:$password \
-     "https://api.bintray.com/$type/$repo/$package/$dest"
+
+    url="https://api.bintray.com/$type/$repo/$package/$dest"
+    if [ "$publish" = "true" ]; then url="$url;publish=1"; fi
+
+    curl -T "$file" -u$user:$password "$url"
+     
 }
 
 function bintray_uploadAll {
@@ -67,6 +73,8 @@ function bintray_uploadAll {
    
     srcrepo="$8"
     license="$9"
+    publish="${10}"
+
     cdir="$PWD"
     cd "$path"
 
@@ -77,7 +85,7 @@ function bintray_uploadAll {
     for f in $files; do
         dest="${f:2}"
         bintray_uploadFile $f $dest \
-        $repo $type $package $user $password $srcrepo $license
+        $repo $type $package $user $password $srcrepo $license $publish
     done
     set +f
     unset IFS
