@@ -427,8 +427,10 @@ jobs:
                 git add natives-snapshot.properties
               
                 git commit -m "[skip ci] update natives snapshot"
-                header=$(echo -n "ad-m:${GITHUB_TOKEN}" | base64)
+                
+                git pull -q --rebase
 
+                header=$(echo -n "ad-m:${GITHUB_TOKEN}" | base64)
                 (git -c http.extraheader="AUTHORIZATION: basic $header" push origin "$branch" || true)
               fi
             fi
