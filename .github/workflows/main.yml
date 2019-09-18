@@ -481,7 +481,6 @@ jobs:
             
       - name: Deploy to bintray
         run: |
-          echo "Deploy to bintray"
           source .github/actions/tools/uploadToMaven.sh
           if [ "${{ secrets.BINTRAY_MAVEN_REPO }}" = "" ];
           then
@@ -493,6 +492,7 @@ jobs:
       
       - name: Deploy to github package registry
         run: |
+          source .github/actions/tools/uploadToMaven.sh
           owner="${GITHUB_REPOSITORY%%/*}"
           registry="https://maven.pkg.github.com/$owner"
           echo "Deploy to github package registry $registry"
