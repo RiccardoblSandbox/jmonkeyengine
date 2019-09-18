@@ -288,7 +288,7 @@ jobs:
           cp -Rvf tmp/natives/android-bullet/lib/* $cdir/jme3-bullet-native-android/libs/
           echo "Done."
 
-          echo "Extract and merge bullet natives for android"         
+          echo "Extract and merge natives for android"         
           echo Remove any prebuilt native
           rm -Rvf jme3-android-native/libs/* 
 

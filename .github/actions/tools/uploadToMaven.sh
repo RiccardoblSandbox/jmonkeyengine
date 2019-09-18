@@ -73,7 +73,10 @@ function uploadToMaven {
         url="$url/$package"    
     fi
     
-    eval "mvn deploy:deploy-file -Durl=\"$url\" -Dfile=\"$jar\" -DrepositoryId=dest.repo -DpomFile=\"$pom\" $auth"    echo "Remove temp path $tmpPath"
+    cmd="mvn deploy:deploy-file -Durl=\"$url\" -Dfile=\"$jar\" -DrepositoryId=dest.repo -DpomFile=\"$pom\" $auth"
+    echo "Run $cmd"
+    eval "$cmd"    
+    echo "Remove temp path $tmpPath"
     rm -Rf "$tmpPath"
 }
 export -f uploadToMaven
