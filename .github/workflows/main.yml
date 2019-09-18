@@ -421,8 +421,8 @@ jobs:
 
                 echo "natives.snapshot=$GITHUB_SHA" > natives-snapshot.properties
                 
-                git config --global user.name "GithubActions"
-                git config --global user.email "actions@robot.frk.wf"
+                git config --global user.name "Github Actions"
+                git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
       
                 git add natives-snapshot.properties
               

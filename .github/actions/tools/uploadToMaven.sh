@@ -16,11 +16,10 @@ source $root/bintray.sh
 set -e
 function uploadToMaven {
     url="$1"
-    repo="$2"
-    user="$3"
-    password="$4"
-    srcrepo="$5"
-    license="$6"
+    user="$2"
+    password="$3"
+    srcrepo="$4"
+    license="$5"
     auth=""
     
     tmpPath="/tmp/temp.uploadToMaven.m2-`date +%s`-`tr -dc A-Za-z0-9 < /dev/urandom | head -c 8 | xargs`"
@@ -73,9 +72,7 @@ function uploadToMaven {
         url="$url/$package"    
     fi
     
-    cmd="mvn deploy:deploy-file -Durl=\"$url\" -Dfile=\"$jar\" -DrepositoryId=dest.repo -DpomFile=\"$pom\" $auth"
-    echo $cmd
-    eval $cmd
+    mvn deploy:deploy-file -Durl="$url" -Dfile="$jar" -DrepositoryId=dest.repo -DpomFile="$pom" $auth
     echo "Remove temp path $tmpPath"
     rm -Rf "$tmpPath"
 }
