@@ -15,11 +15,12 @@ source $root/bintray.sh
 
 set -e
 function uploadToMaven {
-    url="$1"
-    user="$2"
-    password="$3"
-    srcrepo="$4"
-    license="$5"
+    jar="$1"
+    url="$2"
+    user="$3"
+    password="$4"
+    srcrepo="$5"
+    license="$6"
     auth=""
     
     tmpPath="/tmp/temp.uploadToMaven.m2-`date +%s`-`tr -dc A-Za-z0-9 < /dev/urandom | head -c 8 | xargs`"
@@ -60,7 +61,7 @@ function uploadToMaven {
         if [ "$user" = "" -o "$password" = "" ];
         then
             echo "Error! You need username and password to upload to bintray"
-            exit 1
+             exit 1
         fi
         echo "Detected bintray"
 
@@ -72,8 +73,7 @@ function uploadToMaven {
         url="$url/$package"    
     fi
     
-    mvn deploy:deploy-file -Durl="$url" -Dfile="$jar" -DrepositoryId=dest.repo -DpomFile="$pom" $auth
-    echo "Remove temp path $tmpPath"
+    eval "mvn deploy:deploy-file -Durl=\"$url\" -Dfile=\"$jar\" -DrepositoryId=dest.repo -DpomFile=\"$pom\" $auth"    echo "Remove temp path $tmpPath"
     rm -Rf "$tmpPath"
 }
 export -f uploadToMaven
