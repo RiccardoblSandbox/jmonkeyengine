@@ -496,6 +496,6 @@ jobs:
           owner="${GITHUB_REPOSITORY%%/*}"
           registry="https://maven.pkg.github.com/$owner"
           echo "Deploy to github package registry $registry"
-          uploadAllToMaven dist/maven/ $registry ${{ secrets.GITHUB_TOKEN }}
+          uploadAllToMaven dist/maven/ $registry ${GITHUB_ACTOR} ${{ secrets.GITHUB_TOKEN }}
           
 

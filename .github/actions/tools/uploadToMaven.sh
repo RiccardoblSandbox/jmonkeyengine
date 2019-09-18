@@ -7,7 +7,7 @@
 #                   gitrepo must be a valid source repository
 #                   license must be a license supported by bintray eg "BSD 3-Clause"
 #   or
-#       uploadAllToMaven path/of/dist/maven $GITHUB_PACKAGE_REPOSITORY $GITHUB_TOKEN
+#       uploadAllToMaven path/of/dist/maven $GITHUB_PACKAGE_REPOSITORY user password
 #
 #############################################
 root="`dirname  ${BASH_SOURCE[0]}`"
@@ -27,14 +27,7 @@ function uploadToMaven {
     echo "Create temp path $tmpPath"
     mkdir -p "$tmpPath"
     
-    if [ "$password" = "" ];
-    then
-        echo "Use token"
-        auth="-Dtoken=$user"
-    else 
-        mkdir -p /tmp/temp.uploadToMaven.m2/
-        echo "Use username password"
-        echo "
+    echo "
 <settings>
     <servers>
         <server>
@@ -44,10 +37,10 @@ function uploadToMaven {
         </server>
     </servers>
 </settings>
-        " > "$tmpPath/settings.xml"
+    " > "$tmpPath/settings.xml"
 
-        auth="--settings $tmpPath/settings.xml"        
-    fi
+    auth="--settings $tmpPath/settings.xml"        
+
     pom=${jar%.jar} 
     pom=${pom%-javadoc} 
     pom=${pom%-sources} 
