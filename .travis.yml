@@ -1,5 +1,4 @@
 language: java
-sudo: true
 
 branches:
   only:
@@ -7,16 +6,58 @@ branches:
   - /^v3.3.*$/
   - v3.2
   - /^v3.2.*$/
+  - feature/bullet-arm
 
 matrix:
   include:
   - os: linux
     jdk: oraclejdk8
-    dist: precise
+    dist: trusty
     env: UPLOAD=true UPLOAD_NATIVE=true
+    apt:
+        packages:
+            #- lib32gcc-7-dev
+            #- gcc-7-multilib
+            #- g++-7-multilib
+            #- gcc-7-arm-linux-gnueabihf
+            #- gcc-7-arm-linux-gnueabi
+            #- gcc-8-aarch64-linux-gnu
+            #- g++-7-arm-linux-gnueabihf
+            #- g++-7-arm-linux-gnueabi
+            #- g++-8-aarch64-linux-gnu
+            #- libc6-i386
+            #- libc6-dev-i386
+            #- libstdc++-7-dev-i386
+            #- libstdc++6-i386-cross
+            #- lib32stdc++-7-dev
+            #- libx32stdc++-7-dev
+            #- linux-libc-dev-arm64-cross
+            #- libubsan1-arm64-cross
+            #- libstdc++6-arm64-cross
+            #- libstdc++-8-dev-arm64-cross
+            #- libgcc1-arm64-cross
+            #- libgcc-8-dev-arm64-cross 
+            #- libc6-x32 
+            #- libc6-dev-arm64-cross
+            #- libatomic1-arm64-cross
+            #- libasan5-arm64-cross
+            #- binutils-common:amd64
+            - gcc-multilib
+            - g++-multilib
   - os: linux
     jdk: openjdk11
-    dist: xenial
+    dist: bionic
+    env: UPLOAD=true
+    apt:
+        packages:
+            - gcc-7-arm-linux-gnueabihf
+            - gcc-7-arm-linux-gnueabi
+            - gcc-8-aarch64-linux-gnu
+            - g++-7-arm-linux-gnueabihf
+            - g++-7-arm-linux-gnueabi
+            - g++-8-aarch64-linux-gnu
+    install:
+        - gradle -PbuildNativeProjects=true assemble -xjme3-android-native:assemble -xjme3-bullet-native-android:assemble -xjme3-bullet-native:compileBulletjmeLinux32SharedLibraryBulletjmeCpp -xjme3-bullet-native:compileBulletjmeLinux64SharedLibraryBulletjmeCpp
   - os: osx
     osx_image: xcode9.3
     env: UPLOAD_NATIVE=true
@@ -40,10 +81,6 @@ addons:
   hosts:
     - travisci
   hostname: travisci
-  apt:
-    packages:
-    - gcc-multilib
-    - g++-multilib
 
 before_install:
   - '[ -n "$UPLOAD" ] && git fetch --unshallow || :'
@@ -58,7 +95,7 @@ cache:
     - $HOME/.gradle/wrapper/
 
 install:
-  - '[ -n "$UPLOAD_NATIVE" ] && ./gradlew -PbuildNativeProjects=true assemble || ./gradlew assemble'
+  - '[ -n "$UPLOAD_NATIVE" ] && gradle -PbuildNativeProjects=true assemble -xjme3-android-native:assemble -xjme3-bullet-native-android:assemble || ./gradlew assemble -xjme3-android-native:assemble -xjme3-bullet-native-android:assemble'
 
 script:
   - ./gradlew check
