@@ -42,12 +42,31 @@ function uploadToMaven {
     auth="--settings $tmpPath/settings.xml"        
 
     pom=${jar%.jar} 
-    pom=${pom%-javadoc} 
-    pom=${pom%-sources} 
     pom="${pom}.pom"
+
+    javadoc=${jar%.jar} 
+    javadoc="${javadoc}-javadoc.jar"
+
+    source=${jar%.jar} 
+    source="${source}-source.jar"
+
     package="${jar%/*}"    
     package="${package%/*}"
     package="`basename $package`"
+
+    if [ -f "$source" ];
+    then
+        source="-Dsources=$source"
+    else 
+        source=""
+    fi
+
+    if [ -f "$javadoc" ];
+    then
+        javadoc="-Djavadoc=$javadoc"
+    else 
+        javadoc=""
+    fi
     
     if [[ $url == https\:\/\/api.bintray.com\/* ]]; 
     then 
@@ -66,7 +85,7 @@ function uploadToMaven {
         url="$url/$package"    
     fi
     
-    cmd="mvn deploy:deploy-file -Durl=\"$url\" -Dfile=\"$jar\" -DrepositoryId=dest.repo -DpomFile=\"$pom\" $auth"
+    cmd="mvn deploy:deploy-file -Durl=\"$url\" $source $javadoc -Dfile=\"$jar\" -DrepositoryId=dest.repo -DpomFile=\"$pom\" $auth"
     echo "Run $cmd"
     eval "$cmd"    
     echo "Remove temp path $tmpPath"
@@ -82,7 +101,10 @@ function uploadAllToMaven {
 "
   set -f
   for art in $files; do
-    uploadToMaven "$art" ${@:2}
+    if [[ ${art} != *-javadoc.jar && ${art} != *-source.jar  ]];
+    then
+        uploadToMaven "$art" ${@:2}   
+    fi
   done
   set +f
   unset IFS
