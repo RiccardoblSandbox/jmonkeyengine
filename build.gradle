@@ -149,12 +149,16 @@ task configureAndroidNDK {
     }
 }
 
+gradle.rootProject.ext.set("usePrebuildNatives", buildNativeProjects!="true");
+
 if(skipPrebuildLibraries!="true"&&buildNativeProjects!="true"){
     String rootPath = rootProject.projectDir.absolutePath
 
     Properties nativesSnasphotProp = new Properties()
     File nativesSnasphotPropF=new File("${rootPath}/natives-snapshot.properties");
+    
     if(nativesSnasphotPropF.exists()){
+
         nativesSnasphotPropF.withInputStream { nativesSnasphotProp.load(it) }
 
         String nativesSnasphot=nativesSnasphotProp.getProperty("natives.snapshot");
