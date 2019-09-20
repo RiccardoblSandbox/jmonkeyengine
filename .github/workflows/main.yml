@@ -47,7 +47,7 @@ jobs:
 
       - name: Build        
         run: |
-          gradle --parallel --no-daemon -PbuildForPlatforms=LinuxArm,LinuxArmHF,LinuxArm64 -PbuildNativeProjects=true -xmergedJavadoc \
+          gradle --no-daemon -PbuildForPlatforms=LinuxArm,LinuxArmHF,LinuxArm64 -PbuildNativeProjects=true -xmergedJavadoc \
           :jme3-bullet-native:assemble 
 
       - name: Upload natives
@@ -74,7 +74,7 @@ jobs:
       - name: Build        
         run: |
        
-          gradle --parallel --no-daemon -PbuildNativeProjects=true -xmergedJavadoc \
+          gradle --no-daemon -PbuildNativeProjects=true -xmergedJavadoc \
           :jme3-android-native:assemble \
           :jme3-bullet-native-android:assemble 
      
@@ -132,7 +132,7 @@ jobs:
             echo "Prepare windows"
           fi
           
-          gradle --parallel --no-daemon -PbuildNativeProjects=true -Dmaven.repo.local="$PWD/dist/maven" \
+          gradle  --no-daemon -PbuildNativeProjects=true -Dmaven.repo.local="$PWD/dist/maven" \
           -xmergedJavadoc build \
           :jme3-bullet-native:build
                   
@@ -230,7 +230,7 @@ jobs:
         run: |
           source .github/actions/tools/travisCompatEnv.sh
           
-          gradle --parallel -PskipPrebuildLibraries=true -xmergedJavadoc build
+          gradle -PskipPrebuildLibraries=true -xmergedJavadoc build
           # Workaround for #1176: Skip in java 11
           if [ "${{ matrix.jdk }}" = "8.x.x" ]; then  gradle -PskipPrebuildLibraries=true mergedJavadoc ; fi
           gradle -PskipPrebuildLibraries=true -xmergedJavadoc createZipDistribution
