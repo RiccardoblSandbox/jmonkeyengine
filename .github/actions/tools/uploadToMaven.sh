@@ -48,7 +48,7 @@ function uploadToMaven {
     javadoc="${javadoc}-javadoc.jar"
 
     source=${jar%.jar} 
-    source="${source}-source.jar"
+    source="${source}-sources.jar"
 
     package="${jar%/*}"    
     package="${package%/*}"
@@ -101,7 +101,7 @@ function uploadAllToMaven {
 "
   set -f
   for art in $files; do
-    if [[ ${art} != *-javadoc.jar && ${art} != *-source.jar  ]];
+    if [[ ${art} != *-javadoc.jar && ${art} != *-sources.jar  ]];
     then
         uploadToMaven "$art" ${@:2}   
     fi
