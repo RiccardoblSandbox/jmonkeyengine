@@ -37,7 +37,7 @@ jobs:
     name: Build natives for linux (arm)
     runs-on: ubuntu-18.04
     container:
-      image: riccardoblb/buildenv-linuxarm
+      image: riccardoblb/buildenv-jme3:linuxArm
    
     steps:
       - name: Clone the repo
@@ -47,7 +47,7 @@ jobs:
 
       - name: Build        
         run: |
-          gradle --no-daemon -PbuildForPlatforms=LinuxArm,LinuxArmHF,LinuxArm64 -PbuildNativeProjects=true -xmergedJavadoc \
+          gradle --no-daemon -PbuildForPlatforms=LinuxArm,LinuxArmHF,LinuxArm64 -PbuildNativeProjects=true \
           :jme3-bullet-native:assemble 
 
       - name: Upload natives
@@ -61,10 +61,8 @@ jobs:
     name: Build natives for android
     runs-on: ubuntu-18.04
     container:
-      image: riccardoblb/buildenv-android
-      env:
-        JAVA_OPTS: "-XX:+IgnoreUnrecognizedVMOptions"
-
+      image: riccardoblb/buildenv-jme3:android
+  
     steps:
       - name: Clone the repo
         uses: actions/checkout@v1     
@@ -72,9 +70,8 @@ jobs:
           fetch-depth: 1
 
       - name: Build        
-        run: |
-       
-          gradle --no-daemon -PbuildNativeProjects=true -xmergedJavadoc \
+        run: |       
+          gradle --no-daemon -PbuildNativeProjects=true \
           :jme3-android-native:assemble \
           :jme3-bullet-native-android:assemble 
      
@@ -86,6 +83,7 @@ jobs:
      
   BuildNatives:
     strategy:
+      fail-fast: true
       matrix:
         os: [ubuntu-18.04,windows-2019,macOS-10.14] 
         jdk: [8.x.x]
@@ -133,7 +131,7 @@ jobs:
           fi
           
           gradle  --no-daemon -PbuildNativeProjects=true -Dmaven.repo.local="$PWD/dist/maven" \
-          -xmergedJavadoc build \
+          build \
           :jme3-bullet-native:build
                   
       # Upload natives to be used later by the BuildJMonkey job
@@ -149,18 +147,22 @@ jobs:
     name: Build on ${{ matrix.osName }} jdk${{ matrix.jdk }}
     runs-on: ${{ matrix.os }}    
     strategy:
+      fail-fast: true
       matrix:
         os: [ubuntu-18.04,windows-2019,macOS-10.14]
         jdk: [8.x.x,11.x.x]
         include:
           - os: ubuntu-18.04
             osName: linux
+            deploy: true
           - os: windows-2019
             osName: windows
           - os: macOS-10.14
-            osName: mac  
+            osName: mac 
+          - jdk: 11.x.x
+            deploy: false 
+
     steps:          
-    
       - name: Clone the repo
         uses: actions/checkout@v1
         with:
@@ -172,26 +174,6 @@ jobs:
           java-version: ${{ matrix.jdk }}
           architecture: x64 
 
-      - name: "Install dependencies"
-        env:
-          OS_NAME: ${{ matrix.osName }}
-        shell: bash
-        run: |
-          if [ "$OS_NAME" = "mac" ];
-          then
-            echo "Prepare mac"
-            brew install unzip zip
-          elif [ "$OS_NAME" = "linux" ];
-          then
-            echo "Prepare Linux"
-            sudo apt-get update
-            sudo apt-get install -y unzip zip
-          else
-            echo "Prepare windows"
-            echo "Install on Windows"
-            choco install unzip zip
-          fi
-                     
       - name: Download natives for linux
         uses: actions/download-artifact@master
         with:
@@ -221,36 +203,38 @@ jobs:
         with:
           name: linuxarm-natives
           path: build/native
-           
                                                      
       - name: Build Engine
         shell: bash
-        env: 
-          JDK_VERSION:  ${{ matrix.jdk }}
         run: |
           source .github/actions/tools/travisCompatEnv.sh
           
-          gradle -PskipPrebuildLibraries=true -xmergedJavadoc build
-          # Workaround for #1176: Skip in java 11
-          if [ "${{ matrix.jdk }}" = "8.x.x" ]; then  gradle -PskipPrebuildLibraries=true mergedJavadoc ; fi
-          gradle -PskipPrebuildLibraries=true -xmergedJavadoc createZipDistribution
-
-          mkdir -p ./dist/release/
-          mv build/distributions/*.zip dist/release/
+          gradle -PskipPrebuildLibraries=true build
           
-          mkdir -p ./dist/maven/
-          gradle -PskipPrebuildLibraries=true -xmergedJavadoc install -Dmaven.repo.local="$PWD/dist/maven"
+          if [ "${{ matrix.deploy }}" = "true" ];
+          then  
+            sudo apt-get update
+            sudo apt-get install -y zip
 
-          echo "Build native zip"
-          cdir="$PWD"
-          cd "build/native"
-          zip -r "$cdir/dist/jme3-natives.zip" *       
-          cd "$cdir"
-          echo "Done"
+            gradle -PskipPrebuildLibraries=true mergedJavadoc createZipDistribution
+          
+            mkdir -p ./dist/release/
+            mv build/distributions/*.zip dist/release/
+            
+            mkdir -p ./dist/maven/
+            gradle -PskipPrebuildLibraries=true install -Dmaven.repo.local="$PWD/dist/maven"
+
+            echo "Build native zip"
+            cdir="$PWD"
+            cd "build/native"
+            zip -r "$cdir/dist/jme3-natives.zip" *       
+            cd "$cdir"
+            echo "Done"
+          fi         
 
       # Used later by DeploySnapshot
       - name: Upload merged natives
-        if:  matrix.jdk == '8.x.x' && matrix.os == 'ubuntu-18.04'
+        if: matrix.deploy==true
         uses: actions/upload-artifact@master
         with:
           name: natives
@@ -258,7 +242,7 @@ jobs:
           
       # Upload maven artifacts to be used later by the deploy job
       - name: Upload maven artifacts
-        if: github.event_name == 'release' && matrix.jdk == '8.x.x' && matrix.os == 'ubuntu-18.04'
+        if: matrix.deploy==true
         uses: actions/upload-artifact@master
         with:
           name: maven
@@ -266,7 +250,7 @@ jobs:
           
       # Upload release archive to be used later by the deploy job    
       - name: Upload release
-        if: github.event_name == 'release' && matrix.jdk == '8.x.x' && matrix.os == 'ubuntu-18.04'
+        if: github.event_name == 'release' && matrix.deploy==true
         uses: actions/upload-artifact@master
         with:
           name: release
@@ -285,7 +269,6 @@ jobs:
           then
             git clone --single-branch --branch "$branch" https://github.com/${GITHUB_REPOSITORY}.git .
           fi
-
       
       - name: Download merged natives
         uses: actions/download-artifact@master
@@ -385,8 +368,6 @@ jobs:
           path: dist/release      
       
       - name: Deploy to github releases    
-        env:           
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   
         run: |
           echo "${GITHUB_EVENT_PATH}"
           cat ${GITHUB_EVENT_PATH}
@@ -396,7 +377,7 @@ jobs:
           url="https://uploads.github.com/repos/${GITHUB_REPOSITORY}/releases/$releaseId/assets?name=$(basename $filename)"
           echo "Upload to $url"
           curl -L \
-          -H "Authorization: token ${GITHUB_TOKEN}" \
+          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
           -H "Content-Type: application/zip" \
           --data-binary @"$filename" \
           "$url"
