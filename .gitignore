@@ -44,3 +44,5 @@
 /private
 .travis.yml
 appveyor.yml
+javadoc_deploy
+javadoc_deploy.pub
