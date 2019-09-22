@@ -424,6 +424,7 @@ jobs:
         run: |
           mkdir -p ~/.ssh/
           echo "${{ secrets.JAVADOC_GHPAGES_DEPLOY_PRIVKEY }}" > $HOME/.ssh/deploy.key
+          chmod 600 $HOME/.ssh/deploy.key
 
       - name: Clone gh-pages
         run: |
@@ -477,8 +478,8 @@ jobs:
 
             if [ "$addNew" = "true" ];
             then
-              index="$version\n`cat index.txt`"
-              echo -e "$index" > index.txt
+              echo -e "$version\n$index" > index.txt
+              index="`cat index.txt`"
             fi
 
             for v in $index; 
@@ -506,9 +507,7 @@ jobs:
             git config --global user.name "Github Actions"
             git config --global user.email "actions@users.noreply.github.com"
       
-            git add index.txt
-            git add index.html
-            git add "$version"
+            git add .
             git commit -m "$version"
 
             branch="gh-pages"                   
