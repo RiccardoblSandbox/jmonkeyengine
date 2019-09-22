@@ -12,6 +12,11 @@
 # PACKAGE REGISTRY RELEASE
 #   Nothing to do, everything is autoconfigured to work with the account/org that 
 #   is hosting this file.
+# 
+# JAVADOC
+#   Add the javadoc repo (must be owned by the same user/org that runs the build)
+#     JAVADOC_GHPAGES_REPO="javadoc.jmonkeyengine.org.git"
+#
 ######################################################################################
 #
 #       - Riccardo Balbo
@@ -246,7 +251,14 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: maven
-          path: dist/maven              
+          path: dist/maven          
+
+      - name: Upload javadoc
+        if:  matrix.deploy==true
+        uses: actions/upload-artifact@master
+        with:
+          name: javadoc
+          path: dist/javadoc        
           
       # Upload release archive to be used later by the deploy job    
       - name: Upload release
@@ -400,4 +412,90 @@ jobs:
           echo "Deploy to github package registry $registry"
           uploadAllToMaven dist/maven/ $registry "" ${{ secrets.GITHUB_TOKEN }}
           
+  DeployJavaDoc:  
+    needs: [BuildJMonkey]
+    name: Deploy Javadoc
+    runs-on: ubuntu-18.04
+    if: github.event_name == 'release'
+    steps:   
+    
+      - name: Clone gh-pages
+        run: |
+          branch="gh-pages"
+          git clone --single-branch --branch "$branch" https://github.com/`dirname ${GITHUB_REPOSITORY}`/${{ secrets.JAVADOC_GHPAGES_REPO }} .
+          
+             
+      - name: Download javadoc
+        uses: actions/download-artifact@master
+        with:
+          name: javadoc
+          path: newdoc
+      
 
+      - name: Deploy to github pages    
+        run: |
+          version="`if [[ $GITHUB_REF == refs\/tags* ]]; then echo ${GITHUB_REF//refs\/tags\//}; fi`"
+
+          if [ "$version" != "" ];
+          then
+            echo "Deploy as $version"
+
+            if [ -d "$version" ];
+            then
+              rm -Rf "$version"
+            fi
+            mkdir -p "$version"
+
+            mv newdoc "$version"
+
+            if [ ! -f "index.txt" ];
+            then
+              echo "" > index.txt
+            fi
+
+
+            indexHtml=""
+            IFS=$'\n'
+            index="`cat index.txt`"
+            addNew=true
+            for v in $index; 
+            do
+              if [ "$v" = "./$version" ];
+              then
+                echo "$v" "$version"
+                addNew=false
+                break
+              fi
+            done
+
+            if [ "$addNew" = "true" ];
+            then
+              echo "./$version" >> index.txt
+              index="`cat index.txt`"
+            fi
+
+            for v in $index; 
+            do
+              if [ "$v" != "" ];
+              then
+                indexHtml="$indexHtml <p><a href='./$v'>./$v</a></p>"
+              fi
+            done
+
+            unset IFS
+
+
+            if [ -f "header.html" ]; then cat "header.html" > index.html ; else echo "" > index.html ; fi
+            echo "$indexHtml" >> index.html
+            if [ -f "footer.html" ]; then cat "footer.html" >> index.html ; fi
+
+            git add index.txt
+            git add index.html
+            git add "$version"
+            git commit -m "$version"
+
+            branch="gh-pages"
+            header=$(echo -n "ad-m:${GITHUB_TOKEN}" | base64)
+            (git -c http.extraheader="AUTHORIZATION: basic $header" push origin "$branch" --force || true)
+
+          fi
