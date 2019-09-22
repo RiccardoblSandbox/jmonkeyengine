@@ -424,6 +424,7 @@ jobs:
         run: |
           mkdir -p ~/.ssh/
           echo "${{ secrets.JAVADOC_GHPAGES_DEPLOY_PRIVKEY }}" > $HOME/.ssh/deploy.key
+          chmod 600 $HOME/.ssh/deploy.key
 
       - name: Clone gh-pages
         run: |
