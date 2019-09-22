@@ -15,61 +15,33 @@ source $root/bintray.sh
 
 set -e
 function uploadToMaven {
-    jar="$1"
-    url="$2"
-    user="$3"
-    password="$4"
-    srcrepo="$5"
-    license="$6"
+    file="$1"
+    destfile="$2"
+    repourl="$3"
+    user="$4"
+    password="$5"
+    srcrepo="$6"
+    license="$7"
+
     auth=""
-    
-    tmpPath="/tmp/temp.uploadToMaven.m2-`date +%s`-`tr -dc A-Za-z0-9 < /dev/urandom | head -c 8 | xargs`"
-    echo "Create temp path $tmpPath"
-    mkdir -p "$tmpPath"
-    
-    echo "
-<settings>
-    <servers>
-        <server>
-            <id>dest.repo</id>
-            <username>${user}</username>
-            <password>${password}</password>
-        </server>
-    </servers>
-</settings>
-    " > "$tmpPath/settings.xml"
 
-    auth="--settings $tmpPath/settings.xml"        
-
-    pom=${jar%.jar} 
-    pom="${pom}.pom"
-
-    javadoc=${jar%.jar} 
-    javadoc="${javadoc}-javadoc.jar"
-
-    source=${jar%.jar} 
-    source="${source}-sources.jar"
-
-    package="${jar%/*}"    
-    package="${package%/*}"
-    package="`basename $package`"
-
-    if [ -f "$source" ];
+    if [ "$user" != "" ];
     then
-        source="-Dsources=$source"
-    else 
-        source=""
+        echo "Upload with username $user and password"
+        auth="-u$user:$password"
+    else
+        echo "Upload with token"
+        auth="-H \"Authorization: token $password\""
     fi
 
-    if [ -f "$javadoc" ];
-    then
-        javadoc="-Djavadoc=$javadoc"
-    else 
-        javadoc=""
-    fi
     
-    if [[ $url == https\:\/\/api.bintray.com\/* ]]; 
+    if [[ $repourl == https\:\/\/api.bintray.com\/* ]]; 
     then 
+        package="`dirname $destfile`"
+        version="`basename $package`"
+        package="`dirname $package`"
+        package="`basename $package`"
+
         if [ "$user" = "" -o "$password" = "" ];
         then
             echo "Error! You need username and password to upload to bintray"
@@ -77,35 +49,37 @@ function uploadToMaven {
         fi
         echo "Detected bintray"
 
-        bintrayRepo="${url/https\:\/\/api.bintray.com\/maven/}"   
+        bintrayRepo="${repourl/https\:\/\/api.bintray.com\/maven/}"   
         echo "Create package on $bintrayRepo"
 
         bintray_createPackage $bintrayRepo $package $user $password $srcrepo $license  
         
-        url="$url/$package"    
+        repourl="$repourl/$package/$version"    
     fi
-    
-    cmd="mvn deploy:deploy-file -Durl=\"$url\" $source $javadoc -Dfile=\"$jar\" -DrepositoryId=dest.repo -DpomFile=\"$pom\" $auth"
+
+    cmd="curl -T \"$file\" $auth \
+        \"$repourl/$destfile\" \
+        -vvv"
+
     echo "Run $cmd"
     eval "$cmd"    
-    echo "Remove temp path $tmpPath"
-    rm -Rf "$tmpPath"
 }
 export -f uploadToMaven
 
 function uploadAllToMaven {
-  path="$1"
-  
-  files="`find \"$path\" -name *.jar -type f -print`"
-  IFS="
+    path="$1"
+    cdir="$PWD"
+    cd "$path"
+    files="`find . \( -name "*.jar" -o -name "*.pom" \) -type f -print`"
+    IFS="
 "
-  set -f
-  for art in $files; do
-    if [[ ${art} != *-javadoc.jar && ${art} != *-sources.jar  ]];
-    then
-        uploadToMaven "$art" ${@:2}   
-    fi
-  done
-  set +f
-  unset IFS
+    set -f
+    for art in $files; do
+        art="${art:2}"
+        uploadToMaven "$art" "$art" ${@:2}   
+    done
+    set +f
+    unset IFS
+
+    cd "$cdir"
 } 
