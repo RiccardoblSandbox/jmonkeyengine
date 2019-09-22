@@ -25,7 +25,7 @@ function uploadToMaven {
 
     auth=""
 
-    if [ "$user" != "" ];
+    if [ "$user" != "token" ];
     then
         echo "Upload with username $user and password"
         auth="-u$user:$password"

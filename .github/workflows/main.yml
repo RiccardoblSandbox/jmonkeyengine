@@ -410,7 +410,7 @@ jobs:
           source .github/actions/tools/uploadToMaven.sh
           registry="https://maven.pkg.github.com/$GITHUB_REPOSITORY"
           echo "Deploy to github package registry $registry"
-          uploadAllToMaven dist/maven/ $registry "" ${{ secrets.GITHUB_TOKEN }}
+          uploadAllToMaven dist/maven/ $registry "token" ${{ secrets.GITHUB_TOKEN }}
           
   DeployJavaDoc:  
     needs: [BuildJMonkey]
@@ -478,7 +478,7 @@ jobs:
             do
               if [ "$v" != "" ];
               then
-                indexHtml="$indexHtml <p><a href='./$v'>./$v</a></p>"
+                indexHtml="$indexHtml <p><a href='$v'>$v</a></p>"
               fi
             done
 
@@ -496,6 +496,9 @@ jobs:
 
             branch="gh-pages"
             header=$(echo -n "ad-m:${GITHUB_TOKEN}" | base64)
+            git config --global user.name "Github Actions"
+            git config --global user.email "actions@users.noreply.github.com"
+                
             (git -c http.extraheader="AUTHORIZATION: basic $header" push origin "$branch" --force || true)
 
           fi
