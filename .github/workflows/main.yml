@@ -289,9 +289,6 @@ jobs:
           path: dist/
 
       - name: Deploy natives snapshot
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
         run: |
           source .github/actions/tools/bintray.sh
           NATIVE_CHANGES="yes"
@@ -346,7 +343,7 @@ jobs:
                 
                 git pull -q --rebase
 
-                header=$(echo -n "ad-m:${GITHUB_TOKEN}" | base64)
+                header=$(echo -n "ad-m:${{ secrets.GITHUB_TOKEN }}" | base64)
                 (git -c http.extraheader="AUTHORIZATION: basic $header" push origin "$branch" || true)
               
               fi
@@ -410,7 +407,7 @@ jobs:
           source .github/actions/tools/uploadToMaven.sh
           registry="https://maven.pkg.github.com/$GITHUB_REPOSITORY"
           echo "Deploy to github package registry $registry"
-          uploadAllToMaven dist/maven/ $registry "" ${{ secrets.GITHUB_TOKEN }}
+          uploadAllToMaven dist/maven/ $registry "token" ${{ secrets.GITHUB_TOKEN }}
           
   DeployJavaDoc:  
     needs: [BuildJMonkey]
@@ -460,7 +457,7 @@ jobs:
             addNew=true
             for v in $index; 
             do
-              if [ "$v" = "./$version" ];
+              if [ "$v" = "$version" ];
               then
                 echo "$v" "$version"
                 addNew=false
@@ -470,15 +467,15 @@ jobs:
 
             if [ "$addNew" = "true" ];
             then
-              echo "./$version" >> index.txt
-              index="`cat index.txt`"
+              index="$version\n`cat index.txt`"
+              echo -e "$index" > index.txt
             fi
 
             for v in $index; 
             do
               if [ "$v" != "" ];
               then
-                indexHtml="$indexHtml <p><a href='./$v'>./$v</a></p>"
+                indexHtml="$indexHtml <p><a href='./$v'>$v</a></p>"
               fi
             done
 
@@ -488,14 +485,18 @@ jobs:
             if [ -f "header.html" ]; then cat "header.html" > index.html ; else echo "" > index.html ; fi
             echo "$indexHtml" >> index.html
             if [ -f "footer.html" ]; then cat "footer.html" >> index.html ; fi
-
+            
+            git config --global user.name "Github Actions"
+            git config --global user.email "actions@users.noreply.github.com"
+      
             git add index.txt
             git add index.html
             git add "$version"
             git commit -m "$version"
 
             branch="gh-pages"
-            header=$(echo -n "ad-m:${GITHUB_TOKEN}" | base64)
+            header=$(echo -n "ad-m:${{ secrets.GITHUB_TOKEN }}" | base64)
+                    
             (git -c http.extraheader="AUTHORIZATION: basic $header" push origin "$branch" --force || true)
 
           fi
