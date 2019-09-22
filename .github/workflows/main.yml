@@ -452,9 +452,10 @@ jobs:
             then
               rm -Rf "$version"
             fi
-            mkdir -p "$version"
 
             mv newdoc "$version"
+
+            ls -l $version
 
             if [ ! -f "index.txt" ];
             then
@@ -499,6 +500,7 @@ jobs:
 
             if [ -f "inject.css" -a -f "$version/stylesheet.css" ];
             then
+              echo "Inject CSS"
               cat "inject.css" >> "$version/stylesheet.css"
             fi
 
