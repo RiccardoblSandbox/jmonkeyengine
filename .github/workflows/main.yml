@@ -490,6 +490,9 @@ jobs:
       # The actual deploy
       - name: Deploy to github pages    
         run: |
+          set -f
+          IFS=$'\n'
+
           # Get the tag for this release
           version="`if [[ $GITHUB_REF == refs\/tags* ]]; then echo ${GITHUB_REF//refs\/tags\//}; fi`"
 
@@ -507,13 +510,7 @@ jobs:
             # if there isn't an index.txt we create one (we need this to list the versions)
             if [ ! -f "index.txt" ]; then echo "" > index.txt ; fi
             index="`cat index.txt`"
-
-            # We are going to generate also a new index.html
-            indexHtml="" 
-            
-            # Field separator is newline
-            IFS=$'\n'
-            
+         
             # Check if this version is already in index.txt
             addNew=true
             for v in $index; 
@@ -533,29 +530,9 @@ jobs:
               index="`cat index.txt`"
             fi
 
-            # For each version we generate an html representation
-            for v in $index; 
-            do
-              if [ "$v" != "" ];
-              then
-                indexHtml="$indexHtml <p><a href='./$v'>$v</a></p>"
-              fi
-            done
-
-            unset IFS
-
-            # We build the webpage by merging header body and footer
-            if [ -f "header.html" ]; then cat "header.html" > index.html ; else echo "" > index.html ; fi
-            echo "$indexHtml" >> index.html
-            if [ -f "footer.html" ]; then cat "footer.html" >> index.html ; fi
-
-            # If we have an inject.css file, we append its content to the javadoc stylesheet
-            # this allows us to customize the generated javadoc (eg apply a dark theme)
-            if [ -f "inject.css" -a -f "$version/stylesheet.css" ];
-            then
-              echo "Inject CSS"
-              cat "inject.css" >> "$version/stylesheet.css"
-            fi
+            # Regenerate the pages
+            chmod +x make.sh
+            ./make.sh
 
             # Configure git to use the deploy key
             export GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $HOME/.ssh/deploy.key"
