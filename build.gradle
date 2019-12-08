@@ -254,3 +254,5 @@ if(skipPrebuildLibraries!="true"&&buildNativeProjects!="true"){
 //        enableAssertions = true // true by default
 //    }
 //}
+
+BREAK
