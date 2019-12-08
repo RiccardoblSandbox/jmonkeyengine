@@ -245,7 +245,7 @@ if(skipPrebuildLibraries!="true"&&buildNativeProjects!="true"){
 //        }
 //    }
 //}
-
+BREAK
 //allprojects {
 //    tasks.withType(JavaExec) {
 //        enableAssertions = true // false by default
